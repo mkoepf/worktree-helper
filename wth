@@ -21,17 +21,24 @@ die() {
 # ------------------------------------------------------------------------------
 # Command: init
 #
-# Usage: wth init <repo-url> <project-folder>
+# Usage: wth init <repo-url> [project-folder]
 #
 # Clones the repo into <project-folder>/
 # Detaches the primary worktree
 # Creates a clean worktree for main at <project-folder>-main/
+#
+# If project-folder is omitted, it is derived from the repo URL.
 # ------------------------------------------------------------------------------
 wt_init() {
-    [ "$#" -eq 2 ] || die "Usage: wth init <repo-url> <project-folder>"
+    [ "$#" -ge 1 ] && [ "$#" -le 2 ] || die "Usage: wth init <repo-url> [project-folder]"
 
     local repo="$1"
-    local proj="$2"
+    local proj="${2:-}"
+
+    # Extract project name from repo URL if not provided
+    if [ -z "$proj" ]; then
+        proj="$(basename "$repo" .git)"
+    fi
 
     if [ -d "$proj" ]; then
         die "Directory '$proj' already exists."
@@ -181,7 +188,7 @@ case "${1:-}" in
     clean) shift; wt_clean "$@" ;;
     *)
         echo "Usage:"
-        echo "  wth init  <repo-url> <project-folder>"
+        echo "  wth init  <repo-url> [project-folder]"
         echo "  wth merge <feature-worktree-path>"
         echo "  wth clean <feature-worktree-path>"
         exit 1

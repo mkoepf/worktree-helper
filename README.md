@@ -41,7 +41,7 @@ chmod +x ~/bin/wth
 ### 1. init — Initialize repository + main worktree
 
 ```
-wth init <repo-url> <project-folder>
+wth init <repo-url> [project-folder]
 ```
 
 This clones the repo, detaches the primary worktree, and creates:
@@ -50,6 +50,8 @@ This clones the repo, detaches the primary worktree, and creates:
 project/           (primary, parked)
 project-main/      (main worktree)
 ```
+
+If `project-folder` is omitted, it defaults to the repository name extracted from the URL.
 
 Use the `*-main/` directory for development on the main branch.
 
@@ -107,7 +109,7 @@ wth clean ../project-feature-login
 Start project:
 
 ```
-wth init https://github.com/acme/awesome.git awesome
+wth init https://github.com/acme/awesome.git
 cd awesome-main
 ```
 
