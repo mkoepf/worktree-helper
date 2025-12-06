@@ -1,0 +1,189 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ------------------------------------------------------------------------------
+# Helper: Return to original directory
+# ------------------------------------------------------------------------------
+ORIG_DIR="$(pwd)"
+finish() {
+    cd "$ORIG_DIR" || exit 1
+}
+trap finish EXIT
+
+# ------------------------------------------------------------------------------
+# Helper: die with message
+# ------------------------------------------------------------------------------
+die() {
+    echo "ERROR: $*" >&2
+    exit 1
+}
+
+# ------------------------------------------------------------------------------
+# Command: init
+#
+# Usage: wth init <repo-url> <project-folder>
+#
+# Clones the repo into <project-folder>/
+# Detaches the primary worktree
+# Creates a clean worktree for main at <project-folder>-main/
+# ------------------------------------------------------------------------------
+wt_init() {
+    [ "$#" -eq 2 ] || die "Usage: wth init <repo-url> <project-folder>"
+
+    local repo="$1"
+    local proj="$2"
+
+    if [ -d "$proj" ]; then
+        die "Directory '$proj' already exists."
+    fi
+
+    echo "Cloning $repo into $proj ..."
+    git clone "$repo" "$proj"
+
+    cd "$proj"
+
+    echo "Detaching primary worktree ..."
+    git switch --detach
+
+    echo "Creating worktree for main ..."
+    git worktree add "../${proj}-main" main
+
+    echo "Initialization finished."
+}
+
+# ------------------------------------------------------------------------------
+# Command: merge
+#
+# Usage: wth merge <feature-worktree-path>
+#
+# Rebase feature branch onto origin/main,
+# then merge into main worktree and push.
+# Exits immediately if conflicts occur.
+# ------------------------------------------------------------------------------
+wt_merge() {
+    [ "$#" -eq 1 ] || die "Usage: wth merge <feature-worktree-path>"
+
+    local feature_wt="$1"
+    [ -d "$feature_wt" ] || die "Directory '$feature_wt' not found."
+
+    cd "$feature_wt"
+
+    # Determine branch automatically
+    local branch
+    branch="$(git rev-parse --abbrev-ref HEAD)"
+
+    if [ "$branch" = "HEAD" ]; then
+        die "Feature worktree is in detached HEAD state."
+    fi
+
+    echo "Feature branch: $branch"
+
+    echo "Fetching updates ..."
+    git fetch origin
+
+    echo "Rebasing $branch onto origin/main ..."
+    if ! git rebase origin/main; then
+        echo ""
+        echo "CONFLICTS DETECTED — aborting rebase and stopping."
+        git rebase --abort || true
+        exit 1
+    fi
+
+    echo "Rebase successful."
+
+    # Find main worktree automatically
+    local proj_root
+    proj_root="$(git rev-parse --git-path worktrees)"  # points to .../.git/worktrees/
+
+    echo "Locating main worktree ..."
+    # Find a worktree whose branch is 'main'
+    local main_wt=""
+    while read -r wt; do
+        local path branchname
+        path="$(echo "$wt" | awk '{print $1}')"
+        branchname="$(echo "$wt" | awk '{print $2}')"
+
+        if [ "$branchname" = "main" ]; then
+            main_wt="$path"
+            break
+        fi
+    done < <(git worktree list | awk '{print $1, $2}')
+
+    [ -n "$main_wt" ] || die "Could not locate a worktree with branch 'main'."
+
+    echo "Main worktree: $main_wt"
+
+    echo "Merging feature branch into main ..."
+    cd "$main_wt"
+
+    git pull origin main
+
+    if ! git merge --ff-only "$branch"; then
+        die "Cannot fast-forward merge. Ensure feature branch is rebased cleanly."
+    fi
+
+    echo "Pushing to origin/main ..."
+    git push origin main
+
+    echo "Merge completed successfully."
+}
+
+# ------------------------------------------------------------------------------
+# Command: clean
+#
+# Usage: wth clean <feature-worktree-path>
+#
+# Removes the worktree, deletes the local branch, deletes the remote branch,
+# prunes stale refs.
+# ------------------------------------------------------------------------------
+wt_clean() {
+    [ "$#" -eq 1 ] || die "Usage: wth clean <feature-worktree-path>"
+
+    local feature_wt="$1"
+    [ -d "$feature_wt" ] || die "Directory '$feature_wt' does not exist."
+
+    # Identify branch
+    cd "$feature_wt"
+    local branch
+    branch="$(git rev-parse --abbrev-ref HEAD)"
+    if [ "$branch" = "HEAD" ]; then
+        die "Worktree is in detached HEAD; no branch to remove."
+    fi
+
+    echo "Cleaning branch $branch at worktree $feature_wt"
+
+    # Remove worktree
+    cd "$(git rev-parse --show-toplevel)"
+    echo "Removing worktree directory ..."
+    git worktree remove "$feature_wt" || true
+
+    # Delete local branch
+    echo "Deleting local branch $branch ..."
+    git branch -d "$branch" || git branch -D "$branch"
+
+    # Delete remote branch (if exists)
+    echo "Deleting remote branch (if exists) ..."
+    git push origin --delete "$branch" || true
+
+    # Prune stale refs
+    echo "Pruning stale remote refs ..."
+    git fetch --prune
+
+    echo "Cleanup completed."
+}
+
+# ------------------------------------------------------------------------------
+# Command dispatcher
+# ------------------------------------------------------------------------------
+case "${1:-}" in
+    init)  shift; wt_init "$@" ;;
+    merge) shift; wt_merge "$@" ;;
+    clean) shift; wt_clean "$@" ;;
+    *)
+        echo "Usage:"
+        echo "  wth init  <repo-url> <project-folder>"
+        echo "  wth merge <feature-worktree-path>"
+        echo "  wth clean <feature-worktree-path>"
+        exit 1
+        ;;
+esac
