@@ -33,7 +33,7 @@ jobs:
         uses: mislav/bump-homebrew-formula-action@v3
         with:
           formula-name: wth
-          formula-path: Formula/wth.rb
+          formula-path: wth.rb
           homebrew-tap: mkoepf/homebrew-tap
           download-url: https://github.com/${{ github.repository }}/archive/refs/tags/${{ steps.version.outputs.version }}.tar.gz
         env:
