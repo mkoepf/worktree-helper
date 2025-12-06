@@ -64,22 +64,25 @@ project-main/      (main worktree for development)
 
 ---
 
-### 2. merge — Merge a feature worktree into main
+### 2. merge — Merge a feature worktree into a target branch
 
 ```
-wth merge <feature-worktree-path>
+wth merge [--push] <feature-worktree-path> [target-branch]
 ```
+
+- `target-branch` defaults to `main`
+- Use `--push` to push to origin after merging
 
 **Equivalent git commands:**
 
 ```bash
 cd <feature-worktree-path>
 git fetch origin
-git rebase origin/main                # aborts and exits on conflict
-cd <main-worktree>                    # auto-detected via git worktree list
-git pull origin main
+git rebase origin/<target-branch>     # aborts and exits on conflict
+cd <target-worktree>                  # auto-detected via git worktree list
+git pull origin <target-branch>
 git merge --ff-only <feature-branch>
-git push origin main
+git push origin <target-branch>       # only with --push
 ```
 
 If rebase conflicts occur, the rebase is aborted and the script exits.
@@ -128,6 +131,12 @@ Merge back into main:
 
 ```
 wth merge ../awesome-login
+```
+
+Or merge and push in one step:
+
+```
+wth merge --push ../awesome-login
 ```
 
 Cleanup:

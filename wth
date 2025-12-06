@@ -61,16 +61,26 @@ wt_init() {
 # ------------------------------------------------------------------------------
 # Command: merge
 #
-# Usage: wth merge <feature-worktree-path>
+# Usage: wth merge [--push] <feature-worktree-path> [target-branch]
 #
-# Rebase feature branch onto origin/main,
-# then merge into main worktree and push.
+# Rebase feature branch onto origin/<target-branch>,
+# then merge into target worktree. Push only if --push is specified.
 # Exits immediately if conflicts occur.
 # ------------------------------------------------------------------------------
 wt_merge() {
-    [ "$#" -eq 1 ] || die "Usage: wth merge <feature-worktree-path>"
+    local do_push=false
+
+    # Parse --push flag
+    if [ "${1:-}" = "--push" ]; then
+        do_push=true
+        shift
+    fi
+
+    [ "$#" -ge 1 ] && [ "$#" -le 2 ] || die "Usage: wth merge [--push] <feature-worktree-path> [target-branch]"
 
     local feature_wt="$1"
+    local target_branch="${2:-main}"
+
     [ -d "$feature_wt" ] || die "Directory '$feature_wt' not found."
 
     cd "$feature_wt"
@@ -84,12 +94,13 @@ wt_merge() {
     fi
 
     echo "Feature branch: $branch"
+    echo "Target branch: $target_branch"
 
     echo "Fetching updates ..."
     git fetch origin
 
-    echo "Rebasing $branch onto origin/main ..."
-    if ! git rebase origin/main; then
+    echo "Rebasing $branch onto origin/$target_branch ..."
+    if ! git rebase "origin/$target_branch"; then
         echo ""
         echo "CONFLICTS DETECTED — aborting rebase and stopping."
         git rebase --abort || true
@@ -98,39 +109,37 @@ wt_merge() {
 
     echo "Rebase successful."
 
-    # Find main worktree automatically
-    local proj_root
-    proj_root="$(git rev-parse --git-path worktrees)"  # points to .../.git/worktrees/
-
-    echo "Locating main worktree ..."
-    # Find a worktree whose branch is 'main'
-    local main_wt=""
+    echo "Locating $target_branch worktree ..."
+    # Find a worktree whose branch matches target_branch
+    local target_wt=""
     while read -r wt; do
         local path branchname
         path="$(echo "$wt" | awk '{print $1}')"
         branchname="$(echo "$wt" | awk '{print $2}')"
 
-        if [ "$branchname" = "main" ]; then
-            main_wt="$path"
+        if [ "$branchname" = "$target_branch" ]; then
+            target_wt="$path"
             break
         fi
     done < <(git worktree list | awk '{print $1, $2}')
 
-    [ -n "$main_wt" ] || die "Could not locate a worktree with branch 'main'."
+    [ -n "$target_wt" ] || die "Could not locate a worktree with branch '$target_branch'."
 
-    echo "Main worktree: $main_wt"
+    echo "Target worktree: $target_wt"
 
-    echo "Merging feature branch into main ..."
-    cd "$main_wt"
+    echo "Merging feature branch into $target_branch ..."
+    cd "$target_wt"
 
-    git pull origin main
+    git pull origin "$target_branch"
 
     if ! git merge --ff-only "$branch"; then
         die "Cannot fast-forward merge. Ensure feature branch is rebased cleanly."
     fi
 
-    echo "Pushing to origin/main ..."
-    git push origin main
+    if [ "$do_push" = true ]; then
+        echo "Pushing to origin/$target_branch ..."
+        git push origin "$target_branch"
+    fi
 
     echo "Merge completed successfully."
 }
@@ -197,7 +206,7 @@ case "${1:-}" in
     *)
         echo "Usage:"
         echo "  wth init  <repo-url> [project-folder]"
-        echo "  wth merge <feature-worktree-path>"
+        echo "  wth merge [--push] <feature-worktree-path> [target-branch]"
         echo "  wth clean <feature-worktree-path>"
         exit 1
         ;;
