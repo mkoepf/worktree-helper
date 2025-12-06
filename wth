@@ -175,8 +175,10 @@ wt_clean() {
     git -C "$git_common_dir" branch -d "$branch" || git -C "$git_common_dir" branch -D "$branch"
 
     # Delete remote branch (if exists)
-    echo "Deleting remote branch (if exists) ..."
-    git -C "$git_common_dir" push origin --delete "$branch" || true
+    if git -C "$git_common_dir" ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+        echo "Deleting remote branch ..."
+        git -C "$git_common_dir" push origin --delete "$branch" || true
+    fi
 
     # Prune stale refs
     echo "Pruning stale remote refs ..."
