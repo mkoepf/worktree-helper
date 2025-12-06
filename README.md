@@ -44,16 +44,23 @@ chmod +x ~/bin/wth
 wth init <repo-url> [project-folder]
 ```
 
-This clones the repo, detaches the primary worktree, and creates:
-
-```
-project/           (primary, parked)
-project-main/      (main worktree)
-```
-
 If `project-folder` is omitted, it defaults to the repository name extracted from the URL.
 
-Use the `*-main/` directory for development on the main branch.
+**Equivalent git commands:**
+
+```bash
+git clone <repo-url> <project-folder>
+cd <project-folder>
+git switch --detach
+git worktree add ../<project-folder>-main main
+```
+
+**Result:**
+
+```
+project/           (primary, parked in detached HEAD)
+project-main/      (main worktree for development)
+```
 
 ---
 
@@ -63,23 +70,19 @@ Use the `*-main/` directory for development on the main branch.
 wth merge <feature-worktree-path>
 ```
 
-This command:
+**Equivalent git commands:**
 
-1. Detects the feature branch from the worktree
-2. Fetches from origin
-3. Rebases the feature branch onto `origin/main`
-4. Locates the main worktree automatically
-5. Pulls latest main from origin
-6. Fast-forward merges the feature branch
-7. Pushes to `origin/main`
+```bash
+cd <feature-worktree-path>
+git fetch origin
+git rebase origin/main                # aborts and exits on conflict
+cd <main-worktree>                    # auto-detected via git worktree list
+git pull origin main
+git merge --ff-only <feature-branch>
+git push origin main
+```
 
 If rebase conflicts occur, the rebase is aborted and the script exits.
-
-Example:
-
-```
-wth merge ../project-feature-login
-```
 
 ---
 
@@ -89,17 +92,16 @@ wth merge ../project-feature-login
 wth clean <feature-worktree-path>
 ```
 
-This:
+**Equivalent git commands:**
 
-- Removes the worktree
-- Deletes the local branch (tries `-d` first, falls back to `-D`)
-- Deletes the remote branch (if it exists)
-- Prunes stale remote refs
-
-Example:
-
-```
-wth clean ../project-feature-login
+```bash
+cd <feature-worktree-path>
+branch=$(git rev-parse --abbrev-ref HEAD)
+cd <original-directory>
+git worktree remove <feature-worktree-path>
+git branch -d <branch>                # falls back to -D if needed
+git push origin --delete <branch>     # skipped if branch doesn't exist on remote
+git fetch --prune
 ```
 
 ---

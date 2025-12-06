@@ -149,7 +149,7 @@ wt_clean() {
     local feature_wt="$1"
     [ -d "$feature_wt" ] || die "Directory '$feature_wt' does not exist."
 
-    # Identify branch
+    # Identify branch and primary git dir before removing worktree
     cd "$feature_wt"
     local branch
     branch="$(git rev-parse --abbrev-ref HEAD)"
@@ -157,24 +157,30 @@ wt_clean() {
         die "Worktree is in detached HEAD; no branch to remove."
     fi
 
+    # Get path to primary git directory (works from any worktree)
+    local git_common_dir
+    git_common_dir="$(git rev-parse --git-common-dir)"
+
     echo "Cleaning branch $branch at worktree $feature_wt"
 
+    # Change to original directory before removing worktree
+    cd "$ORIG_DIR"
+
     # Remove worktree
-    cd "$(git rev-parse --show-toplevel)"
     echo "Removing worktree directory ..."
-    git worktree remove "$feature_wt" || true
+    git -C "$git_common_dir" worktree remove "$feature_wt" || true
 
     # Delete local branch
     echo "Deleting local branch $branch ..."
-    git branch -d "$branch" || git branch -D "$branch"
+    git -C "$git_common_dir" branch -d "$branch" || git -C "$git_common_dir" branch -D "$branch"
 
     # Delete remote branch (if exists)
     echo "Deleting remote branch (if exists) ..."
-    git push origin --delete "$branch" || true
+    git -C "$git_common_dir" push origin --delete "$branch" || true
 
     # Prune stale refs
     echo "Pruning stale remote refs ..."
-    git fetch --prune
+    git -C "$git_common_dir" fetch --prune
 
     echo "Cleanup completed."
 }
