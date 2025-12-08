@@ -113,17 +113,19 @@ wt_merge() {
 
     echo "Locating $target_branch worktree ..."
     # Find a worktree whose branch matches target_branch
+    # git worktree list output format: /path/to/wt  <commit> [branch] or (detached HEAD)
     local target_wt=""
     while read -r wt; do
         local path branchname
         path="$(echo "$wt" | awk '{print $1}')"
-        branchname="$(echo "$wt" | awk '{print $2}')"
+        # Extract branch name from [branch] format, removing brackets
+        branchname="$(echo "$wt" | awk '{print $3}' | tr -d '[]')"
 
         if [ "$branchname" = "$target_branch" ]; then
             target_wt="$path"
             break
         fi
-    done < <(git worktree list | awk '{print $1, $2}')
+    done < <(git worktree list)
 
     [ -n "$target_wt" ] || die "Could not locate a worktree with branch '$target_branch'."
 
