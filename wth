@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+VERSION="0.2.0"
+
 # ------------------------------------------------------------------------------
 # Helper: Return to original directory
 # ------------------------------------------------------------------------------
@@ -197,15 +199,61 @@ wt_clean() {
 }
 
 # ------------------------------------------------------------------------------
+# Command: add
+#
+# Usage: wth add <worktree-name>
+#
+# Creates a new worktree with a new branch of the same name.
+# Can be run from any worktree in the project.
+# The new worktree is created as a sibling directory.
+# ------------------------------------------------------------------------------
+wt_add() {
+    [ "$#" -eq 1 ] || die "Usage: wth add <worktree-name>"
+
+    local name="$1"
+
+    # Get path to primary git directory (works from any worktree)
+    local git_common_dir
+    git_common_dir="$(git rev-parse --git-common-dir)"
+
+    # Get the worktree root (where we are now)
+    local worktree_root
+    worktree_root="$(git rev-parse --show-toplevel)"
+
+    # Create new worktree as sibling to current worktree
+    local parent_dir
+    parent_dir="$(dirname "$worktree_root")"
+
+    local worktree_path="$parent_dir/$name"
+
+    if [ -d "$worktree_path" ]; then
+        die "Directory '$worktree_path' already exists."
+    fi
+
+    echo "Creating worktree '$name' at $worktree_path ..."
+    git -C "$git_common_dir" worktree add "$worktree_path" -b "$name"
+
+    echo "Worktree created successfully."
+    echo "cd $worktree_path"
+}
+
+# ------------------------------------------------------------------------------
 # Command dispatcher
 # ------------------------------------------------------------------------------
 case "${1:-}" in
+    -v|--version)
+        echo "$VERSION"
+        ;;
     init)  shift; wt_init "$@" ;;
+    add)   shift; wt_add "$@" ;;
     merge) shift; wt_merge "$@" ;;
     clean) shift; wt_clean "$@" ;;
     *)
+        echo "wth $VERSION - Git worktree helper"
+        echo ""
         echo "Usage:"
         echo "  wth init  <repo-url> [project-folder]"
+        echo "  wth add   <worktree-name>"
         echo "  wth merge [--push] <feature-worktree-path> [target-branch]"
         echo "  wth clean <feature-worktree-path>"
         exit 1
