@@ -1,3 +1,3 @@
-# Exclude test files from release archives
-test_wth.sh export-ignore
-.gitattributes export-ignore
+# Exclude non-essential files from release archives (only wth script is included)
+* export-ignore
+wth -export-ignore
