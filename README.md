@@ -6,6 +6,7 @@ Designed for multi-branch, multi-session development — especially when working
 This toolkit supports:
 
 - Safe initialization of a project using worktrees
+- Quick creation of new feature worktrees
 - Feature-branch development in isolated worktrees
 - Fast-forward merges into remote main, automatically rebasing first
 - Cleanup of worktrees and branches (local + remote)
@@ -38,6 +39,12 @@ chmod +x ~/bin/wth
 
 ## Commands
 
+### `wth --version`
+
+Display the version number.
+
+---
+
 ### 1. init — Initialize repository + main worktree
 
 ```
@@ -64,7 +71,39 @@ project-main/      (main worktree for development)
 
 ---
 
-### 2. merge — Merge a feature worktree into a target branch
+### 2. add — Create a new feature worktree
+
+```
+wth add <worktree-name>
+```
+
+Creates a new worktree with a new branch of the same name. Can be run from any worktree in the project. The new worktree is created as a sibling directory.
+
+**Equivalent git commands:**
+
+```bash
+git worktree add ../<worktree-name> -b <worktree-name>
+```
+
+**Example:**
+
+```bash
+cd awesome-main/
+wth add feature-login
+cd ../feature-login/
+```
+
+**Result:**
+
+```
+awesome/              (primary, parked in detached HEAD)
+awesome-main/         (main worktree)
+feature-login/        (new feature worktree)
+```
+
+---
+
+### 3. merge — Merge a feature worktree into a target branch
 
 ```
 wth merge [--push] <feature-worktree-path> [target-branch]
@@ -89,7 +128,7 @@ If rebase conflicts occur, the rebase is aborted and the script exits.
 
 ---
 
-### 3. clean — Remove worktree + delete branch (local + remote)
+### 4. clean — Remove worktree + delete branch (local + remote)
 
 ```
 wth clean <feature-worktree-path>
@@ -121,8 +160,8 @@ cd awesome-main
 Create feature worktree:
 
 ```
-git worktree add ../awesome-login -b feature-login main
-cd ../awesome-login
+wth add feature-login
+cd ../feature-login
 # ... make changes ...
 git commit -am "Add login feature"
 ```
@@ -130,19 +169,19 @@ git commit -am "Add login feature"
 Merge back into main:
 
 ```
-wth merge ../awesome-login
+wth merge ../feature-login
 ```
 
 Or merge and push in one step:
 
 ```
-wth merge --push ../awesome-login
+wth merge --push ../feature-login
 ```
 
 Cleanup:
 
 ```
-wth clean ../awesome-login
+wth clean ../feature-login
 ```
 
 ---
