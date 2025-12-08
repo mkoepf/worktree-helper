@@ -64,7 +64,7 @@ test_add_in_help() {
 }
 
 # ------------------------------------------------------------------------------
-# Test: Add command creates worktree and branch
+# Test: Add command creates worktree and branch (called from anywhere)
 # ------------------------------------------------------------------------------
 test_add_command() {
     local test_dir
@@ -85,26 +85,94 @@ test_add_command() {
     # Create a worktree to simulate working from (like main worktree)
     git worktree add ../main-wt main --quiet 2>/dev/null || git worktree add ../main-wt --quiet
 
-    # Run wth add from the main worktree
-    cd ../main-wt
-    "$WTH" add feature-test
+    # Run wth add from OUTSIDE any worktree (the key difference)
+    cd "$test_dir"
+    "$WTH" add "$test_dir/main-wt" feature-test
 
-    # Check that the worktree was created
-    if [ -d "../feature-test" ]; then
+    # Check that the worktree was created as sibling to main-wt
+    if [ -d "$test_dir/feature-test" ]; then
         pass "wth add creates worktree directory"
     else
-        fail "wth add should create worktree directory at ../feature-test"
+        fail "wth add should create worktree directory at $test_dir/feature-test"
         return
     fi
 
     # Check that the branch was created
-    cd ../feature-test
+    cd "$test_dir/feature-test"
     local branch
     branch=$(git rev-parse --abbrev-ref HEAD)
     if [ "$branch" = "feature-test" ]; then
         pass "wth add creates branch with same name"
     else
         fail "wth add should create branch 'feature-test', got: $branch"
+    fi
+}
+
+# ------------------------------------------------------------------------------
+# Test: Add command works with "." as worktree path
+# ------------------------------------------------------------------------------
+test_add_command_dot() {
+    local test_dir
+    test_dir=$(mktemp -d)
+    trap "rm -rf '$test_dir'" RETURN
+
+    # Create a test repo structure
+    cd "$test_dir"
+    mkdir main-repo
+    cd main-repo
+    git init --quiet
+    git config user.email "test@test.com"
+    git config user.name "Test"
+    echo "test" > file.txt
+    git add file.txt
+    git commit -m "initial" --quiet
+
+    # Create a worktree
+    git worktree add ../main-wt main --quiet 2>/dev/null || git worktree add ../main-wt --quiet
+
+    # Run wth add with "." from inside the worktree
+    cd ../main-wt
+    "$WTH" add . feature-dot
+
+    # Check that the worktree was created as sibling
+    if [ -d "../feature-dot" ]; then
+        pass "wth add with '.' creates worktree as sibling"
+    else
+        fail "wth add with '.' should create worktree at ../feature-dot"
+        return
+    fi
+
+    # Check that the branch was created
+    cd ../feature-dot
+    local branch
+    branch=$(git rev-parse --abbrev-ref HEAD)
+    if [ "$branch" = "feature-dot" ]; then
+        pass "wth add with '.' creates correct branch"
+    else
+        fail "wth add with '.' should create branch 'feature-dot', got: $branch"
+    fi
+}
+
+# ------------------------------------------------------------------------------
+# Test: Add command validates worktree path exists
+# ------------------------------------------------------------------------------
+test_add_validates_path() {
+    local test_dir
+    test_dir=$(mktemp -d)
+    trap "rm -rf '$test_dir'" RETURN
+
+    cd "$test_dir"
+
+    # Run wth add with non-existent path
+    local output
+    if output=$("$WTH" add "/nonexistent/path" feature-test 2>&1); then
+        fail "wth add should fail for non-existent path"
+    else
+        if echo "$output" | grep -qi "not found\|does not exist\|no such"; then
+            pass "wth add validates worktree path exists"
+        else
+            fail "wth add should report path not found, got: $output"
+        fi
     fi
 }
 
@@ -319,6 +387,8 @@ test_version_flag
 test_help_includes_version
 test_add_in_help
 test_add_command
+test_add_command_dot
+test_add_validates_path
 test_init_command
 test_init_derives_name
 test_clean_command

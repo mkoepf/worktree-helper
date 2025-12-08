@@ -203,26 +203,29 @@ wt_clean() {
 # ------------------------------------------------------------------------------
 # Command: add
 #
-# Usage: wth add <worktree-name>
+# Usage: wth add <existing-worktree-path> <new-worktree-name>
 #
 # Creates a new worktree with a new branch of the same name.
-# Can be run from any worktree in the project.
-# The new worktree is created as a sibling directory.
+# Can be run from anywhere. The new worktree is created as a sibling
+# to the specified existing worktree.
 # ------------------------------------------------------------------------------
 wt_add() {
-    [ "$#" -eq 1 ] || die "Usage: wth add <worktree-name>"
+    [ "$#" -eq 2 ] || die "Usage: wth add <existing-worktree-path> <new-worktree-name>"
 
-    local name="$1"
+    local ref_wt="$1"
+    local name="$2"
+
+    [ -d "$ref_wt" ] || die "Directory '$ref_wt' does not exist."
 
     # Get path to primary git directory (works from any worktree)
     local git_common_dir
-    git_common_dir="$(git rev-parse --git-common-dir)"
+    git_common_dir="$(git -C "$ref_wt" rev-parse --git-common-dir)"
 
-    # Get the worktree root (where we are now)
+    # Get the worktree root of the reference worktree
     local worktree_root
-    worktree_root="$(git rev-parse --show-toplevel)"
+    worktree_root="$(git -C "$ref_wt" rev-parse --show-toplevel)"
 
-    # Create new worktree as sibling to current worktree
+    # Create new worktree as sibling to reference worktree
     local parent_dir
     parent_dir="$(dirname "$worktree_root")"
 
@@ -255,7 +258,7 @@ case "${1:-}" in
         echo ""
         echo "Usage:"
         echo "  wth init  <repo-url> [project-folder]"
-        echo "  wth add   <worktree-name>"
+        echo "  wth add   <existing-worktree-path> <new-worktree-name>"
         echo "  wth merge [--push] <feature-worktree-path> [target-branch]"
         echo "  wth clean <feature-worktree-path>"
         exit 1

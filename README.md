@@ -74,22 +74,30 @@ project-main/      (main worktree for development)
 ### 2. add — Create a new feature worktree
 
 ```
-wth add <worktree-name>
+wth add <existing-worktree-path> <new-worktree-name>
 ```
 
-Creates a new worktree with a new branch of the same name. Can be run from any worktree in the project. The new worktree is created as a sibling directory.
+Creates a new worktree with a new branch of the same name. Can be run from anywhere. The new worktree is created as a sibling to the specified existing worktree.
 
 **Equivalent git commands:**
 
 ```bash
-git worktree add ../<worktree-name> -b <worktree-name>
+cd <existing-worktree-path>
+git worktree add ../<new-worktree-name> -b <new-worktree-name>
 ```
 
 **Example:**
 
 ```bash
+wth add awesome-main feature-login
+cd feature-login/
+```
+
+Or using `.` when inside a worktree:
+
+```bash
 cd awesome-main/
-wth add feature-login
+wth add . feature-login
 cd ../feature-login/
 ```
 
@@ -160,7 +168,7 @@ cd awesome-main
 Create feature worktree:
 
 ```
-wth add feature-login
+wth add . feature-login
 cd ../feature-login
 # ... make changes ...
 git commit -am "Add login feature"
