@@ -116,11 +116,9 @@ test_init_command() {
     test_dir=$(mktemp -d)
     trap "rm -rf '$test_dir'" RETURN
 
-    # Create a bare repo to clone from
+    # Create a bare repo to clone from with 'main' as default branch
     cd "$test_dir"
-    mkdir origin.git
-    cd origin.git
-    git init --bare --quiet
+    git init --bare --initial-branch=main origin.git --quiet
 
     # Create a temporary clone to add initial commit
     cd "$test_dir"
@@ -182,11 +180,9 @@ test_init_derives_name() {
     test_dir=$(mktemp -d)
     trap "rm -rf '$test_dir'" RETURN
 
-    # Create a bare repo
+    # Create a bare repo with 'main' as default branch
     cd "$test_dir"
-    mkdir awesome-project.git
-    cd awesome-project.git
-    git init --bare --quiet
+    git init --bare --initial-branch=main awesome-project.git --quiet
 
     # Add initial commit
     cd "$test_dir"
@@ -267,11 +263,9 @@ test_merge_command() {
     test_dir=$(mktemp -d)
     trap "rm -rf '$test_dir'" RETURN
 
-    # Create a bare repo (origin)
+    # Create a bare repo (origin) with 'main' as default branch
     cd "$test_dir"
-    mkdir origin.git
-    cd origin.git
-    git init --bare --quiet
+    git init --bare --initial-branch=main origin.git --quiet
 
     # Clone and set up initial state
     cd "$test_dir"
