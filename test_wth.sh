@@ -109,6 +109,54 @@ test_add_command() {
 }
 
 # ------------------------------------------------------------------------------
+# Test: Add command works with relative path to primary repo from parent directory
+# ------------------------------------------------------------------------------
+test_add_command_relative() {
+    local test_dir
+    test_dir=$(mktemp -d)
+    trap "rm -rf '$test_dir'" RETURN
+
+    # Create a test repo structure similar to wth init
+    # primary repo is detached, worktree is on main
+    cd "$test_dir"
+    mkdir primary-repo
+    cd primary-repo
+    git init --quiet
+    git config user.email "test@test.com"
+    git config user.name "Test"
+    echo "test" > file.txt
+    git add file.txt
+    git commit -m "initial" --quiet
+
+    # Detach primary and create main worktree (like wth init does)
+    git switch --detach --quiet
+    git worktree add ../main-wt main --quiet
+
+    # Run wth add from parent directory with RELATIVE path to PRIMARY repo
+    # This is the case that was failing: git-common-dir returns ".git" (relative)
+    cd "$test_dir"
+    "$WTH" add primary-repo feature-relative
+
+    # Check that the worktree was created as sibling
+    if [ -d "$test_dir/feature-relative" ]; then
+        pass "wth add with relative path creates worktree"
+    else
+        fail "wth add with relative path should create worktree at $test_dir/feature-relative"
+        return
+    fi
+
+    # Check that the branch was created
+    cd "$test_dir/feature-relative"
+    local branch
+    branch=$(git rev-parse --abbrev-ref HEAD)
+    if [ "$branch" = "feature-relative" ]; then
+        pass "wth add with relative path creates correct branch"
+    else
+        fail "wth add with relative path should create branch 'feature-relative', got: $branch"
+    fi
+}
+
+# ------------------------------------------------------------------------------
 # Test: Add command works with "." as worktree path
 # ------------------------------------------------------------------------------
 test_add_command_dot() {
@@ -387,6 +435,7 @@ test_version_flag
 test_help_includes_version
 test_add_in_help
 test_add_command
+test_add_command_relative
 test_add_command_dot
 test_add_validates_path
 test_init_command

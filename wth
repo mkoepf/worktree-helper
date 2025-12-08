@@ -217,13 +217,24 @@ wt_add() {
 
     [ -d "$ref_wt" ] || die "Directory '$ref_wt' does not exist."
 
-    # Get path to primary git directory (works from any worktree)
-    local git_common_dir
-    git_common_dir="$(git -C "$ref_wt" rev-parse --git-common-dir)"
+    # Change into reference worktree to get paths
+    cd "$ref_wt"
 
-    # Get the worktree root of the reference worktree
+    # Get the worktree root (always absolute)
     local worktree_root
-    worktree_root="$(git -C "$ref_wt" rev-parse --show-toplevel)"
+    worktree_root="$(git rev-parse --show-toplevel)"
+
+    # Get path to primary git directory
+    # May be relative (e.g., ".git") so we make it absolute
+    local git_common_dir
+    git_common_dir="$(git rev-parse --git-common-dir)"
+    case "$git_common_dir" in
+        /*) ;; # already absolute
+        *)  git_common_dir="$worktree_root/$git_common_dir" ;;
+    esac
+
+    # Return to original directory before creating worktree
+    cd "$ORIG_DIR"
 
     # Create new worktree as sibling to reference worktree
     local parent_dir
