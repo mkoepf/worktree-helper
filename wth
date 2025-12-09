@@ -78,7 +78,7 @@ wt_merge() {
         shift
     fi
 
-    [ "$#" -ge 1 ] && [ "$#" -le 2 ] || die "Usage: wth merge [--push] <feature-worktree-path> [target-branch]"
+    [ "$#" -ge 1 ] && [ "$#" -le 2 ] || die "Usage: wth merge [--push] <feature-worktree-path> [target-branch=main]"
 
     local feature_wt="$1"
     local target_branch="${2:-main}"
@@ -270,7 +270,7 @@ case "${1:-}" in
         echo "Usage:"
         echo "  wth init  <repo-url> [project-folder]"
         echo "  wth add   <existing-worktree-path> <new-worktree-name>"
-        echo "  wth merge [--push] <feature-worktree-path> [target-branch]"
+        echo "  wth merge [--push] <feature-worktree-path> [target-branch=main]"
         echo "  wth clean <feature-worktree-path>"
         exit 1
         ;;
