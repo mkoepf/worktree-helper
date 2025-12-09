@@ -1,5 +1,7 @@
 # wth — Worktree Helper
 
+[![CI](https://github.com/mkoepf/worktree-helper/actions/workflows/ci.yml/badge.svg)](https://github.com/mkoepf/worktree-helper/actions/workflows/ci.yml)
+
 A lightweight utility that automates a clean, professional Git workflow using **git worktrees**.
 Designed for multi-branch, multi-session development — especially when working with tools like Claude Code, where each worktree benefits from its own isolated directory, settings, and context.
 
