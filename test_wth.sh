@@ -121,7 +121,7 @@ test_add_command_relative() {
     cd "$test_dir"
     mkdir primary-repo
     cd primary-repo
-    git init --quiet
+    git init --initial-branch=main --quiet
     git config user.email "test@test.com"
     git config user.name "Test"
     echo "test" > file.txt
